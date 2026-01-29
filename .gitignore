@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# Datos sensibles
+.contraseñas_encriptadas.json
+.config_sistema.json
