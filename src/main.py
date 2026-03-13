@@ -47,18 +47,18 @@ def inicializar_aplicacion() -> tuple:
 
     # 4. HWID – Verificar / Registrar dispositivo
     ruta_config = config.obtener_ruta('config')
-    _verificar_hwid(ruta_config)
+    _verificar_hwid(ruta_config, ruta_usb)
 
     print(f"{Colores.VERDE}✓ Aplicación inicializada{Colores.RESET}\n")
 
     return config, usb_manager
 
 
-def _verificar_hwid(ruta_config: str) -> None:
-    """Verifica el HWID del dispositivo actual. Registra si es la primera vez."""
+def _verificar_hwid(ruta_config: str, ruta_usb: str) -> None:
+    """Verifica el HWID de la USB actual. Registra si es la primera vez."""
     print(f"{Colores.AZUL}🔍 Verificando dispositivo...{Colores.RESET}")
 
-    autorizado = GestorHWID.verificar_dispositivo(ruta_config)
+    autorizado = GestorHWID.verificar_dispositivo(ruta_config, ruta_usb)
 
     if not autorizado:
         print(f"\n{Colores.ROJO}{Colores.NEGRITA}{'█'*60}{Colores.RESET}")
@@ -72,9 +72,9 @@ def _verificar_hwid(ruta_config: str) -> None:
     dispositivos = GestorHWID.listar_dispositivos(ruta_config)
     if not dispositivos:
         print(f"{Colores.AMARILLO}  → Primer acceso: registrando este dispositivo...{Colores.RESET}")
-        ok = GestorHWID.registrar_dispositivo(ruta_config)
+        ok = GestorHWID.registrar_dispositivo(ruta_config, ruta_usb)
         if ok:
-            hwid_hash = GestorHWID.get_hwid_hash()
+            hwid_hash = GestorHWID.get_hwid_hash(ruta_usb)
             print(f"{Colores.VERDE}  ✓ Dispositivo maestro registrado{Colores.RESET}")
             print(f"{Colores.GRIS}    HWID: {hwid_hash[:32]}...{Colores.RESET}")
         else:

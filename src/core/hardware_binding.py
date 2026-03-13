@@ -21,65 +21,70 @@ class GestorHWID:
     # ──────────────────────────────────────────────────────────────────────
 
     @staticmethod
-    def get_hwid() -> str:
+    def get_hwid(ruta_usb: str = None) -> str:
         """
-        Obtiene el identificador de hardware único del equipo.
-        Usa el número de serie del disco duro (Windows/Linux/macOS).
-        Como fallback usa combinación de hostname + plataforma.
+        Obtiene el identificador único de la USB.
+        Si no se proporciona ruta_usb o falla, usa un fallback basado en el sistema.
         """
-        sistema = platform.system()
-
-        try:
-            if sistema == "Windows":
-                return GestorHWID._hwid_windows()
-            elif sistema == "Linux":
-                return GestorHWID._hwid_linux()
-            elif sistema == "Darwin":
-                return GestorHWID._hwid_macos()
-        except Exception:
-            pass
+        if ruta_usb:
+            sistema = platform.system()
+            try:
+                if sistema == "Windows":
+                    return GestorHWID._hwid_windows(ruta_usb)
+                elif sistema == "Linux":
+                    return GestorHWID._hwid_linux(ruta_usb)
+                elif sistema == "Darwin":
+                    return GestorHWID._hwid_macos(ruta_usb)
+            except Exception:
+                pass
 
         return GestorHWID._hwid_fallback()
 
     @staticmethod
-    def _hwid_windows() -> str:
-        """Número de serie del disco C: vía WMI"""
+    def _hwid_windows(ruta_usb: str) -> str:
+        """Número de serie del volumen en Windows"""
+        unidad = ruta_usb[:2] if len(ruta_usb) >= 2 and ruta_usb[1] == ':' else ruta_usb
         result = subprocess.run(
-            ["wmic", "diskdrive", "get", "SerialNumber"],
+            ["wmic", "logicaldisk", "where", f"name='{unidad}'", "get", "VolumeSerialNumber"],
             capture_output=True, text=True, timeout=5
         )
-        lines = [l.strip() for l in result.stdout.splitlines() if l.strip() and l.strip().lower() != "serialnumber"]
+        lines = [l.strip() for l in result.stdout.splitlines() if l.strip() and l.strip().lower() != "volumeserialnumber"]
         if lines:
             return lines[0]
-        # Alternativa: número de serie del volumen C:
+            
+        # Alternativa: comando vol
         result2 = subprocess.run(
-            ["vol", "C:"],
+            ["vol", unidad],
             capture_output=True, text=True, shell=True, timeout=5
         )
         for line in result2.stdout.splitlines():
             if "número de serie del volumen" in line.lower() or "volume serial number" in line.lower():
-                return line.split()[-1]
+                partes = line.split()
+                if partes:
+                    return partes[-1]
         return GestorHWID._hwid_fallback()
 
     @staticmethod
-    def _hwid_linux() -> str:
-        """Machine ID en Linux"""
-        for path in ["/etc/machine-id", "/var/lib/dbus/machine-id"]:
-            try:
-                return Path(path).read_text().strip()
-            except Exception:
-                pass
-        return GestorHWID._hwid_fallback()
-
-    @staticmethod
-    def _hwid_macos() -> str:
-        """IOPlatformSerialNumber en macOS"""
+    def _hwid_linux(ruta_usb: str) -> str:
+        """UUID del bloque en Linux"""
         result = subprocess.run(
-            ["ioreg", "-l"], capture_output=True, text=True, timeout=5
+            ["findmnt", "-n", "-o", "UUID", ruta_usb],
+            capture_output=True, text=True, timeout=5
+        )
+        uuid = result.stdout.strip()
+        if uuid:
+            return uuid
+        return GestorHWID._hwid_fallback()
+
+    @staticmethod
+    def _hwid_macos(ruta_usb: str) -> str:
+        """Volume UUID en macOS"""
+        result = subprocess.run(
+            ["diskutil", "info", ruta_usb], capture_output=True, text=True, timeout=5
         )
         for line in result.stdout.splitlines():
-            if "IOPlatformSerialNumber" in line:
-                return line.split("=")[-1].strip().strip('"')
+            if "Volume UUID:" in line:
+                return line.split(":")[-1].strip()
         return GestorHWID._hwid_fallback()
 
     @staticmethod
@@ -93,9 +98,9 @@ class GestorHWID:
     # ──────────────────────────────────────────────────────────────────────
 
     @staticmethod
-    def get_hwid_hash() -> str:
+    def get_hwid_hash(ruta_usb: str = None) -> str:
         """Devuelve hash SHA-512 del HWID (para almacenamiento seguro)"""
-        raw = GestorHWID.get_hwid()
+        raw = GestorHWID.get_hwid(ruta_usb)
         return hashlib.sha512(raw.encode()).hexdigest()
 
     # ──────────────────────────────────────────────────────────────────────
@@ -103,21 +108,22 @@ class GestorHWID:
     # ──────────────────────────────────────────────────────────────────────
 
     @staticmethod
-    def registrar_dispositivo(ruta_config: str, nombre_dispositivo: str = None) -> bool:
+    def registrar_dispositivo(ruta_config: str, ruta_usb: str = None, nombre_dispositivo: str = None) -> bool:
         """
-        Registra el HWID actual como dispositivo autorizado.
+        Registra la USB actual como dispositivo autorizado.
         Si el archivo de config no existe o está vacío, este dispositivo
         se convierte en el dispositivo maestro.
 
         Args:
             ruta_config: Ruta de .config_sistema.json
-            nombre_dispositivo: Etiqueta opcional (ej. "PC-Anton")
+            ruta_usb: Ruta de la memoria USB
+            nombre_dispositivo: Etiqueta opcional (ej. "USB-Anton")
 
         Returns:
             True si el dispositivo fue registrado correctamente
         """
-        hwid_hash = GestorHWID.get_hwid_hash()
-        hwid_raw  = GestorHWID.get_hwid()
+        hwid_hash = GestorHWID.get_hwid_hash(ruta_usb)
+        hwid_raw  = GestorHWID.get_hwid(ruta_usb)
 
         if nombre_dispositivo is None:
             import socket
@@ -165,9 +171,9 @@ class GestorHWID:
             return False
 
     @staticmethod
-    def verificar_dispositivo(ruta_config: str) -> bool:
+    def verificar_dispositivo(ruta_config: str, ruta_usb: str = None) -> bool:
         """
-        Verifica si el dispositivo actual está autorizado.
+        Verifica si la USB actual está autorizada.
 
         Returns:
             True si está autorizado (o si no hay ningún config → primer acceso)
@@ -184,7 +190,7 @@ class GestorHWID:
             if not autorizados:
                 return True  # Sin dispositivos registrados aún
 
-            hwid_hash = GestorHWID.get_hwid_hash()
+            hwid_hash = GestorHWID.get_hwid_hash(ruta_usb)
             return hwid_hash in autorizados
 
         except Exception:
