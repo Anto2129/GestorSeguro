@@ -1,0 +1,14 @@
+{
+  "dispositivos_autorizados": {
+    "7b58b73384752af37035d9d2c9bf8fe469a3b52071e8be8709ff4bfa8845da0fcd374019d1286d45241929b33ee7661b0bdea16abe39b5fc4ccf33bb4a839ffe": {
+      "nombre": "Toral",
+      "hwid_preview": "Toral_Toral_...",
+      "registrado": "2026-03-13 11:05:50",
+      "maestro": true
+    }
+  },
+  "dispositivo_maestro": "7b58b73384752af37035d9d2c9bf8fe469a3b52071e8be8709ff4bfa8845da0fcd374019d1286d45241929b33ee7661b0bdea16abe39b5fc4ccf33bb4a839ffe",
+  "contraseña_maestra_hash": "{\"s512\":\"d9e6762dd1c8eaf6d61b3c6192fc408d4d6d5f1176d0c29169bc24e71c3f274ad27fcd5811b313d681f7e55ec02d73d499c95455b6b5bb503acf574fba8ffe85\",\"b2b\":\"f5ab8bafa6f2f72b431188ac38ae2de7bb618fb3d38b6cbf639defcdd5e10a86b22fccff571da37e42b23b80b657ee4d936478f582280a87d6dbb1da73f5c47d\",\"pb2\":\"66b7c051022659d650d9ddefc58d354abaf9b7ec9e9a68bf36cc40ad466f030d400bf6b1ba209c3cb3494fc56d315b87ca086b8b587473cea1961adee2c30eef\",\"salt\":\"fc566016a2c7922aa64c72a9a3e7c34b69a64119dfad1fd53141dd4120795397\"}",
+  "fecha_creacion": "2026-03-13T11:06:02.410424",
+  "version": "7.0.0"
+}
